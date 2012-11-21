@@ -1,0 +1,5 @@
+name: RLMShop
+main: com.rlminecraft.RLMShop.RLMShop
+version: 1.0
+author: MattFielding
+depend: [Vault,Towny]

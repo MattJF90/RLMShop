@@ -1,0 +1,24 @@
+###########################
+#                         #
+#  RLMShop Configuration  #
+#                         #
+###########################
+
+
+# General plugin settings
+general:
+    cost: 15.0
+
+# Towny-related settings
+towny:
+    town_only: true
+    shop_plot: true
+
+# Storage settings
+#   - currently, only mysql is supported
+storage:
+    type: mysql
+    host: localhost
+    database: minecraft
+    username: root
+    password: ''
