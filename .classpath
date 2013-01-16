@@ -2,8 +2,8 @@
 <classpath>
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
-	<classpathentry kind="lib" path="C:/Users/Matt/Downloads/bukkit-1.4.2-R0.2.jar"/>
-	<classpathentry kind="lib" path="C:/Users/Matt/Downloads/Vault.jar"/>
-	<classpathentry kind="lib" path="C:/Users/Matt/Downloads/Towny_Advanced/Towny.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Matt/MC Resources/Plugin/Towny.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Matt/MC Resources/Plugin/Vault.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Matt/MC Resources/Bukkit/bukkit-1.4.6-R0.3.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

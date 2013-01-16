@@ -44,6 +44,40 @@ public class Shop {
 		} else {
 			this.quantity = 0;
 		}
+		this.status = ShopStatus.ACTIVE;
+	}
+	
+	/**
+	 * Shop Constructor
+	 * @param frame location of the shop (item frame)
+	 * @param material material item which the shop will sell/buy
+	 * @param owner owner of the shop
+	 * @param retail retail (selling) price of the item
+	 * @param pawn pawn (buying) price of the item
+	 * @param quantity quantity the shop will have
+	 * @param max_quantity maximum quantity the shop will hold
+	 */
+	public Shop(Location frame, MaterialData material, String owner, int retail, int pawn, int quantity, int max_quantity) {
+		this.frame = frame;
+		this.material = material;
+		this.owner = owner;
+		this.price_retail = retail;
+		this.price_pawn = pawn;
+		this.quantity = quantity;
+		this.max_quantity = max_quantity;
+		this.status = ShopStatus.ACTIVE;
+	}
+	
+	
+	public Shop(Shop shop) {
+		this.frame = shop.getLocation();
+		this.material = shop.getMaterialData();
+		this.owner = shop.getOwner();
+		this.price_retail = shop.getRetailPrice();
+		this.price_pawn = shop.getPawnPrice();
+		this.quantity = shop.getQuantity();
+		this.max_quantity = shop.getMaxQuantity();
+		this.status = shop.getStatus();
 	}
 	
 	
@@ -118,6 +152,20 @@ public class Shop {
 		return true;
 	}
 	
+	/**
+	 * Changes the status of the shop for saving purposes
+	 * @param status the new status of the shop
+	 * @return true if successfully changed status<br>false otherwise
+	 */
+	public boolean setStatus(ShopStatus status) {
+		try {
+			this.status = status;
+		} catch (Exception e) {
+			return false;
+		}
+		return true;
+	}
+	
 	
 	
 	
@@ -172,6 +220,13 @@ public class Shop {
 	 */
 	public int getMaxQuantity() {
 		return this.max_quantity;
+	}
+	
+	/**
+	 * @return the current save status of the shop
+	 */
+	public ShopStatus getStatus() {
+		return this.status;
 	}
 	
 	/**

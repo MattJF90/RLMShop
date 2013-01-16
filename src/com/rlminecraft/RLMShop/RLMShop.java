@@ -1,24 +1,33 @@
 package com.rlminecraft.RLMShop;
 
+import java.util.HashMap;
 import java.util.logging.Logger;
 
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import com.rlminecraft.RLMShop.Prompt.PromptState;
+
 import net.milkbowl.vault.economy.Economy;
 
 public class RLMShop extends JavaPlugin {
+	PluginState state;
 	Logger console;
-	public static Economy economy = null;
+	public Economy economy = null;
 	Plugin towny = null;
 	Config conf;
 	ShopStorage store;
+	HashMap<String,PromptState> playerChatState;
 	
 	/**
 	 * Called upon enabling of plugin
 	 */
 	public void onEnable() {
+		
+		// Set initial plugin state
+		state = PluginState.NORMAL;
+		playerChatState = new HashMap<String,PromptState>();
 		
 		// Get logger
 		console = this.getLogger();
@@ -39,6 +48,7 @@ public class RLMShop extends JavaPlugin {
 		
 		// Access storage method
 		store = new ShopStorage(
+				this,
 				StorageType.MYSQL, 
 				(String) conf.getSetting("storage.host"), 
 				(String) conf.getSetting("storage.database"), 
@@ -54,7 +64,16 @@ public class RLMShop extends JavaPlugin {
 	 * Called upon disabling of plugin
 	 */
 	public void onDisable() {
-		store.localToDBIfChange();
+		switch (state) {
+		case NORMAL:
+			store.localToDBIfChange();
+			break;
+		case CRASHED:
+			console.severe("RLMShop has been shut down due to a severe error!");
+			break;
+		default:
+			console.severe("RLMShop has been shut down for unknown reasons!");
+		}
 	}
 	
 	/**

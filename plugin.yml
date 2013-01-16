@@ -3,3 +3,8 @@ main: com.rlminecraft.RLMShop.RLMShop
 version: 1.0
 author: MattFielding
 depend: [Vault,Towny]
+
+permissions:
+  rlmshop.admin:
+    description: Allows full control of all shops
+    default: op
