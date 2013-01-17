@@ -2,24 +2,29 @@ package com.rlminecraft.RLMShop;
 
 import java.util.HashMap;
 import org.bukkit.ChatColor;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.entity.ItemFrame;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
-import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.hanging.HangingBreakEvent;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
+import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.material.MaterialData;
 
+import com.palmergames.bukkit.towny.Towny;
+import com.palmergames.bukkit.towny.exceptions.NotRegisteredException;
+import com.palmergames.bukkit.towny.object.TownBlockType;
+import com.rlminecraft.RLMShop.Chat.ChatStatus;
+import com.rlminecraft.RLMShop.Chat.Messages;
+import com.rlminecraft.RLMShop.Chat.ChatState;
 import com.rlminecraft.RLMShop.Event.ShopCreationEvent;
 import com.rlminecraft.RLMShop.Event.ShopDeletionEvent;
 import com.rlminecraft.RLMShop.Event.ShopModificationEvent;
-import com.rlminecraft.RLMShop.Prompt.PromptAction;
-import com.rlminecraft.RLMShop.Prompt.PromptState;
-import com.rlminecraft.RLMShop.Prompt.ShopPrompt;
 import com.rlminecraft.util.Inv;
 
 /**
@@ -31,6 +36,7 @@ public class ShopListener implements Listener {
 	
 	private RLMShop plugin;
 	
+	
 	/**
 	 * <b>ShopListener Constructor</b><br>
 	 * Listens for any events required by RLMShop
@@ -40,6 +46,7 @@ public class ShopListener implements Listener {
 		plugin = instance;
 	}
 	
+	
 	/**
 	 * Called when a player interacts with an item frame.
 	 * On left-click, it calls the shop info screen.
@@ -47,68 +54,35 @@ public class ShopListener implements Listener {
 	 * @param event The PlayerInteractEvent
 	 */
 	@EventHandler
-	public void onPlayerInteract (PlayerInteractEvent event) {
+	public void onPlayerInteract (PlayerInteractEntityEvent event) {
 		// Check the following:
 		//  - player is targeting block (not air)
 		//  - targeted block is an item frame
 		//  - shop exists at block location
-		if (event.getAction() != Action.LEFT_CLICK_BLOCK
-				&& event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
-		if (!event.hasBlock()) return;
-		if (event.getClickedBlock().getType() != Material.ITEM_FRAME) return;
-		Shop shop = plugin.store.accessShop(event.getClickedBlock().getLocation());
-		if (shop == null) return;
-		
-		switch (event.getAction()) {
-		case LEFT_CLICK_BLOCK:
-			event.setCancelled(true);
-			// View shop info
-			shopView(event.getPlayer(), shop);
-			break;
-		case RIGHT_CLICK_BLOCK:
-			event.setCancelled(true);
-			// Begin prompt
-			if (event.getPlayer().getName().equalsIgnoreCase(shop.getOwner())) {
-				plugin.playerChatState.put(event.getPlayer().getName(), new PromptState(PromptAction.OWNERPROMPT, shop));
-			} else if (event.getPlayer().hasPermission("rlmshop.admin")) {
-				plugin.playerChatState.put(event.getPlayer().getName(), new PromptState(PromptAction.ADMINPROMPT, shop));
-			} else {
-				plugin.playerChatState.put(event.getPlayer().getName(), new PromptState(PromptAction.PLAYERPROMPT, shop));
-			}
-			break;
-		}
-	}
-	
-	//@EventHandler
-	/*public void onBlockBreak (BlockBreakEvent event) {
-		//Check for direct item-frame break
-		if (event.getBlock().getType() == Material.ITEM_FRAME) {
-			Shop shop = plugin.store.accessShop(event.getBlock().getLocation());
-			if (shop != null) {
-				if (event.getPlayer().getName() == shop.getOwner()) {
-					event.getPlayer().sendMessage(ChatColor.RED + "To delete this shop, right-click on it and type \"destroy\".");
-				} else {
-					event.getPlayer().sendMessage(ChatColor.RED + "You do not have permission to destroy this shop.");
-				}
-				event.setCancelled(true);
+		if (!(event.getRightClicked() instanceof ItemFrame)) return;
+		Shop shop = plugin.store.accessShop(event.getRightClicked().getLocation());
+		if (shop == null) {
+			if (event.getPlayer().isSneaking()) {
+				// Create shop
 			}
 			return;
 		}
-		// Check for indirect item-frame break
-		/*int y = event.getBlock().getY();
-		World world = event.getBlock().getWorld();
-		for (int x = -1; x <= 1; x += 2) {
-			for (int z = -1; z <= 1; z += 2) {
-				if (x != 0 && z != 0) {
-					Block block = event.getBlock().getRelative(x,0,y);
-					Shop shop = plugin.store.accessShop(block.getLocation());
-					if (shop != null && block.getType() == Material.ITEM_FRAME) {
-						if (block.)
-					}
-				}
+		event.setCancelled(true);
+		if (event.getPlayer().isSneaking()) {
+			// Begin prompt
+			if (event.getPlayer().getName().equalsIgnoreCase(shop.getOwner())) {
+				plugin.playerChatState.put(event.getPlayer().getName(), new ChatState(ChatStatus.OWNERPROMPT, shop));
+			} else if (event.getPlayer().hasPermission("rlmshop.admin")) {
+				plugin.playerChatState.put(event.getPlayer().getName(), new ChatState(ChatStatus.ADMINPROMPT, shop));
+			} else {
+				plugin.playerChatState.put(event.getPlayer().getName(), new ChatState(ChatStatus.PLAYERPROMPT, shop));
 			}
-		}*/
-	//}
+		} else {
+			// View shop info
+			shopView(event.getPlayer(), shop);
+		}
+	}
+	
 	
 	@EventHandler
 	public void onHangBreak (HangingBreakEvent event) {
@@ -119,6 +93,7 @@ public class ShopListener implements Listener {
 		event.setCancelled(true);
 	}
 	
+	
 	@EventHandler
 	public void onChat (AsyncPlayerChatEvent event) {
 		if (plugin.playerChatState.containsKey(event.getPlayer().getName())) return;
@@ -126,8 +101,8 @@ public class ShopListener implements Listener {
 		event.setCancelled(true);
 		Player player = event.getPlayer();
 		String name = player.getName();
-		PromptState state = plugin.playerChatState.get(name);
-		if ((state.action != null && state.action != PromptAction.NONE) &&
+		ChatState state = plugin.playerChatState.get(name);
+		if ((state.action != null && state.action != ChatStatus.NONE) &&
 			(	event.getMessage().equalsIgnoreCase("exit")
 			|| event.getMessage().equalsIgnoreCase("quit")
 			|| event.getMessage().equalsIgnoreCase("stop"))) {
@@ -136,35 +111,35 @@ public class ShopListener implements Listener {
 		switch (state.action) {
 		case OWNERPROMPT:			// Initial owner prompt
 			if (event.getMessage().toLowerCase() == "add") {
-				ShopPrompt.Add(player, state.shop);
-				state = new PromptState(PromptAction.ADD, state.shop);
+				Messages.Add(player, state.shop);
+				state = new ChatState(ChatStatus.ADD, state.shop);
 				plugin.playerChatState.put(name,state);
 			} else
 			if (event.getMessage().toLowerCase() == "remove") {
-				ShopPrompt.Remove(player, state.shop);
-				state = new PromptState(PromptAction.REMOVE, state.shop);
+				Messages.Remove(player, state.shop);
+				state = new ChatState(ChatStatus.REMOVE, state.shop);
 				plugin.playerChatState.put(name,state);
 			} else
 			if (event.getMessage().toLowerCase() == "set") {
-				ShopPrompt.Set(player);
-				state = new PromptState(PromptAction.SET, state.shop);
+				Messages.Set(player);
+				state = new ChatState(ChatStatus.SET, state.shop);
 				plugin.playerChatState.put(name,state);
 			} else
 			if (event.getMessage().toLowerCase() == "destroy") {
-				ShopPrompt.Destroy(player);
-				state = new PromptState(PromptAction.DESTROY, state.shop);
+				Messages.Destroy(player);
+				state = new ChatState(ChatStatus.DESTROY, state.shop);
 				plugin.playerChatState.put(name,state);
 			} else {
-				ShopPrompt.Invalid(player);
+				Messages.Invalid(player);
 				plugin.playerChatState.remove(name);
 			}
 			break;
 		case ADD:					// Adding items
-			int addAmount = ShopPrompt.IntResponse(event.getMessage());
+			int addAmount = Messages.IntResponse(event.getMessage());
 			if (addAmount < 0) {
-				ShopPrompt.Invalid_Repeat(player);
+				Messages.Invalid_Repeat(player);
 			} else {
-				ShopPrompt.Complete(player);
+				Messages.Complete(player);
 				plugin.playerChatState.remove(name);
 			}
 			break;
@@ -172,11 +147,11 @@ public class ShopListener implements Listener {
 			// not used
 			break;
 		case REMOVE:				// Removing items
-			int removeAmount = ShopPrompt.IntResponse(event.getMessage());
+			int removeAmount = Messages.IntResponse(event.getMessage());
 			if (removeAmount < 0) {
-				ShopPrompt.Invalid_Repeat(player);
+				Messages.Invalid_Repeat(player);
 			} else {
-				ShopPrompt.Complete(player);
+				Messages.Complete(player);
 				plugin.playerChatState.remove(name);
 			}
 			break;
@@ -186,27 +161,27 @@ public class ShopListener implements Listener {
 		case SET:					// Setting shop properties
 			if (   event.getMessage().equalsIgnoreCase("retail")
 				|| event.getMessage().equalsIgnoreCase("retail price")) {
-				ShopPrompt.SetRetail(player);
-				plugin.playerChatState.put(name, new PromptState(PromptAction.SETRETAIL,state.shop));
+				Messages.SetRetail(player);
+				plugin.playerChatState.put(name, new ChatState(ChatStatus.SETRETAIL,state.shop));
 			} else
 			if (   event.getMessage().equalsIgnoreCase("pawn")
 				|| event.getMessage().equalsIgnoreCase("pawn price")) {
-				ShopPrompt.SetPawn(player);
-				plugin.playerChatState.put(name, new PromptState(PromptAction.SETPAWN,state.shop));
+				Messages.SetPawn(player);
+				plugin.playerChatState.put(name, new ChatState(ChatStatus.SETPAWN,state.shop));
 			} else
 			if (   event.getMessage().equalsIgnoreCase("max")
 				|| event.getMessage().equalsIgnoreCase("max quantity")) {
-				ShopPrompt.SetMaxQuantity(player);
-				plugin.playerChatState.put(name, new PromptState(PromptAction.SETMAXQUANTITY,state.shop));
+				Messages.SetMaxQuantity(player);
+				plugin.playerChatState.put(name, new ChatState(ChatStatus.SETMAXQUANTITY,state.shop));
 			}
 			break;
 		case SETRETAIL:				// Setting retail price
-			float buyPrice = ShopPrompt.FloatResponse(event.getMessage());
+			float buyPrice = Messages.FloatResponse(event.getMessage());
 			if (buyPrice < 0 && buyPrice != -1) {
-				ShopPrompt.ConfirmSetRetail(player, buyPrice, false);
-				ShopPrompt.Invalid_Repeat(player);
+				Messages.ConfirmSetRetail(player, buyPrice, false);
+				Messages.Invalid_Repeat(player);
 			} else {
-				ShopPrompt.ConfirmSetRetail(player, buyPrice, true);
+				Messages.ConfirmSetRetail(player, buyPrice, true);
 				plugin.playerChatState.remove(name);
 			}
 			break;
@@ -214,12 +189,12 @@ public class ShopListener implements Listener {
 			// not used
 			break;
 		case SETPAWN:				// Setting pawn price
-			float sellPrice = ShopPrompt.FloatResponse(event.getMessage());
+			float sellPrice = Messages.FloatResponse(event.getMessage());
 			if (sellPrice < 0 && sellPrice != -1) {
-				ShopPrompt.ConfirmSetPawn(player, sellPrice, false);
-				ShopPrompt.Invalid_Repeat(player);
+				Messages.ConfirmSetPawn(player, sellPrice, false);
+				Messages.Invalid_Repeat(player);
 			} else {
-				ShopPrompt.ConfirmSetPawn(player, sellPrice, true);
+				Messages.ConfirmSetPawn(player, sellPrice, true);
 				plugin.playerChatState.remove(name);
 			}
 			break;
@@ -227,12 +202,12 @@ public class ShopListener implements Listener {
 			// not used
 			break;
 		case SETMAXQUANTITY:		// Setting maximum quantity
-			int maxAmount = ShopPrompt.IntResponse(event.getMessage());
+			int maxAmount = Messages.IntResponse(event.getMessage());
 			if (maxAmount < 0 && maxAmount != -1) {
-				ShopPrompt.ConfirmSetMaxQuantity(player, maxAmount, false);
+				Messages.ConfirmSetMaxQuantity(player, maxAmount, false);
 				plugin.playerChatState.remove(name);
 			} else {
-				ShopPrompt.ConfirmSetMaxQuantity(player, maxAmount, true);
+				Messages.ConfirmSetMaxQuantity(player, maxAmount, true);
 				plugin.playerChatState.remove(name);
 			}
 			break;
@@ -240,13 +215,13 @@ public class ShopListener implements Listener {
 			// not used
 			break;
 		case DESTROY:				// Destroying shop
-			if (ShopPrompt.BoolResponse(event.getMessage()) == 1) {
-				ShopPrompt.ConfirmDestroy(player);
+			if (Messages.BoolResponse(event.getMessage()) == 1) {
+				Messages.ConfirmDestroy(player);
 			}
-			else if (ShopPrompt.BoolResponse(event.getMessage()) == 0) {
-				ShopPrompt.Cancel(player);
+			else if (Messages.BoolResponse(event.getMessage()) == 0) {
+				Messages.Cancel(player);
 			} else {
-				ShopPrompt.Invalid(player);
+				Messages.Invalid(player);
 				break;
 			}
 			// On valid response, remove chat state (no shop prompt)
@@ -257,97 +232,97 @@ public class ShopListener implements Listener {
 			break;
 		case PLAYERPROMPT:			// Initial (non-owner) player prompt
 			if (event.getMessage().toLowerCase() == "buy") {
-				ShopPrompt.Buy(player, state.shop);
-				state = new PromptState(PromptAction.BUY, state.shop);
+				Messages.Buy(player, state.shop);
+				state = new ChatState(ChatStatus.BUY, state.shop);
 				plugin.playerChatState.put(name,state);
 			} else
 			if (event.getMessage().toLowerCase() == "sell") {
-				ShopPrompt.Sell(player, state.shop);
-				state = new PromptState(PromptAction.SELL, state.shop);
+				Messages.Sell(player, state.shop);
+				state = new ChatState(ChatStatus.SELL, state.shop);
 				plugin.playerChatState.put(name,state);
 			} else {
-				ShopPrompt.Invalid(player);
+				Messages.Invalid(player);
 				plugin.playerChatState.remove(name);
 			}
 			break;
 		case BUY:					// Buying items
-			int buyAmount = ShopPrompt.IntResponse(event.getMessage());
+			int buyAmount = Messages.IntResponse(event.getMessage());
 			if (buyAmount < 0) {
-				ShopPrompt.Invalid(player);
+				Messages.Invalid(player);
 				plugin.playerChatState.remove(name);
 			} else {
-				ShopPrompt.ConfirmBuy(player, state.shop, buyAmount);
-				plugin.playerChatState.put(name, new PromptState(PromptAction.CONFIRMBUY, state.shop, buyAmount));
+				Messages.ConfirmBuy(player, state.shop, buyAmount);
+				plugin.playerChatState.put(name, new ChatState(ChatStatus.CONFIRMBUY, state.shop, buyAmount));
 			}
 			break;
 		case CONFIRMBUY:			// Confirm buying items
-			if (ShopPrompt.BoolResponse(event.getMessage()) == 1) {
+			if (Messages.BoolResponse(event.getMessage()) == 1) {
 				shopBuy(player, state.shop, (int) state.arg);
-				ShopPrompt.Complete(player);
+				Messages.Complete(player);
 				plugin.playerChatState.remove(name);
 			}
-			else if (ShopPrompt.BoolResponse(event.getMessage()) == 0) {
-				ShopPrompt.Cancel(player);
+			else if (Messages.BoolResponse(event.getMessage()) == 0) {
+				Messages.Cancel(player);
 				plugin.playerChatState.remove(name);
 			} else {
-				ShopPrompt.Invalid_Repeat(player);
+				Messages.Invalid_Repeat(player);
 			}
 			break;
 		case SELL:					// Selling items
-			int sellAmount = ShopPrompt.IntResponse(event.getMessage());
+			int sellAmount = Messages.IntResponse(event.getMessage());
 			if (sellAmount < 0) {
-				ShopPrompt.Invalid(player);
+				Messages.Invalid(player);
 				plugin.playerChatState.remove(name);
 			} else {
-				ShopPrompt.ConfirmSell(player, state.shop, sellAmount);
-				plugin.playerChatState.put(name, new PromptState(PromptAction.CONFIRMSELL, state.shop, sellAmount));
+				Messages.ConfirmSell(player, state.shop, sellAmount);
+				plugin.playerChatState.put(name, new ChatState(ChatStatus.CONFIRMSELL, state.shop, sellAmount));
 			}
 			break;
 		case CONFIRMSELL:			// Confirm selling items
-			if (ShopPrompt.BoolResponse(event.getMessage()) == 1) {
+			if (Messages.BoolResponse(event.getMessage()) == 1) {
 				shopSell(player, state.shop, (int) state.arg);
-				ShopPrompt.Complete(player);
+				Messages.Complete(player);
 				plugin.playerChatState.remove(name);
 			}
-			else if (ShopPrompt.BoolResponse(event.getMessage()) == 0) {
-				ShopPrompt.Cancel(player);
+			else if (Messages.BoolResponse(event.getMessage()) == 0) {
+				Messages.Cancel(player);
 				plugin.playerChatState.remove(name);
 			} else {
-				ShopPrompt.Invalid_Repeat(player);
+				Messages.Invalid_Repeat(player);
 			}
 			break;
 		case ADMINPROMPT:			// Initial admin prompt
 			if (event.getMessage().toLowerCase() == "buy") {
-				ShopPrompt.Buy(player, state.shop);
-				state = new PromptState(PromptAction.BUY, state.shop);
+				Messages.Buy(player, state.shop);
+				state = new ChatState(ChatStatus.BUY, state.shop);
 				plugin.playerChatState.put(name,state);
 			} else
 			if (event.getMessage().toLowerCase() == "sell") {
-				ShopPrompt.Sell(player, state.shop);
-				state = new PromptState(PromptAction.SELL, state.shop);
+				Messages.Sell(player, state.shop);
+				state = new ChatState(ChatStatus.SELL, state.shop);
 				plugin.playerChatState.put(name,state);
 			} else
 			if (event.getMessage().toLowerCase() == "add") {
-				ShopPrompt.Add(player, state.shop);
-				state = new PromptState(PromptAction.ADD, state.shop);
+				Messages.Add(player, state.shop);
+				state = new ChatState(ChatStatus.ADD, state.shop);
 				plugin.playerChatState.put(name,state);
 			} else
 			if (event.getMessage().toLowerCase() == "remove") {
-				ShopPrompt.Remove(player, state.shop);
-				state = new PromptState(PromptAction.REMOVE, state.shop);
+				Messages.Remove(player, state.shop);
+				state = new ChatState(ChatStatus.REMOVE, state.shop);
 				plugin.playerChatState.put(name,state);
 			} else
 			if (event.getMessage().toLowerCase() == "set") {
-				ShopPrompt.Set(player);
-				state = new PromptState(PromptAction.SET, state.shop);
+				Messages.Set(player);
+				state = new ChatState(ChatStatus.SET, state.shop);
 				plugin.playerChatState.put(name,state);
 			} else
 			if (event.getMessage().toLowerCase() == "destroy") {
-				ShopPrompt.Destroy(player);
-				state = new PromptState(PromptAction.DESTROY, state.shop);
+				Messages.Destroy(player);
+				state = new ChatState(ChatStatus.DESTROY, state.shop);
 				plugin.playerChatState.put(name,state);
 			} else {
-				ShopPrompt.Invalid(player);
+				Messages.Invalid(player);
 				plugin.playerChatState.remove(name);
 			}
 			break;
@@ -381,6 +356,30 @@ public class ShopListener implements Listener {
 	
 	
 	
+	
+	
+	
+	public void newShop (Player player, MaterialData item, Location location) throws NotRegisteredException {
+		if (plugin.towny instanceof Towny) {
+			Towny towny = (Towny) plugin.towny;
+			if (!(plugin.conf.getSetting("towny.town_only") == (Object) false
+				|| 		(towny.getTownyUniverse().getTownBlock(location).hasTown()
+						&& towny.getTownyUniverse().getTownBlock(location).hasResident()
+						&& towny.getTownyUniverse().getTownBlock(location).getResident().getName() == player.getName()
+						)
+			)) {
+				player.sendMessage(ChatColor.RED + "You can only create a shop on an owned plot!");
+				return;
+			}
+			if (!(plugin.conf.getSetting("towny.shop_plot") == (Object) false
+				|| towny.getTownyUniverse().getTownBlock(location).getType() == TownBlockType.COMMERCIAL)) {
+				player.sendMessage(ChatColor.RED + "You can only create a shop on a shop plot!");
+				return;
+			}
+		}
+		// Shop creation allowed
+		ShopCreationEvent create = new ShopCreationEvent(new Shop(location, item, player.getName()));
+	}
 	
 	
 	

@@ -7,7 +7,7 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import com.rlminecraft.RLMShop.Prompt.PromptState;
+import com.rlminecraft.RLMShop.Chat.ChatState;
 
 import net.milkbowl.vault.economy.Economy;
 
@@ -18,7 +18,7 @@ public class RLMShop extends JavaPlugin {
 	Plugin towny = null;
 	Config conf;
 	ShopStorage store;
-	HashMap<String,PromptState> playerChatState;
+	HashMap<String,ChatState> playerChatState;
 	
 	/**
 	 * Called upon enabling of plugin
@@ -27,7 +27,7 @@ public class RLMShop extends JavaPlugin {
 		
 		// Set initial plugin state
 		state = PluginState.NORMAL;
-		playerChatState = new HashMap<String,PromptState>();
+		playerChatState = new HashMap<String,ChatState>();
 		
 		// Get logger
 		console = this.getLogger();
